@@ -57,11 +57,6 @@ local function common_res(txn, ret, status, ...)
     core.done(ret)
 end
 
-local ipv4_reg = must_regex([[^\d+(?:\.\d+)*$]], true)
-local domain_reg = must_regex([=[^(?:[-_[:alnum:]]+\.)*[[:alpha:]][-[:alnum:]]{0,61}[[:alnum:]]$]=], true)
-local http_body_reg = must_regex([[^(?:Content-Length|Transfer-Encoding)\s*:]], false)
-local chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-
 local function req_lines(txn)
     local offset = 0
     local first = true
@@ -88,6 +83,9 @@ local function req_lines(txn)
         end
     end
 end
+
+local ipv4_reg = must_regex([[^\d+(?:\.\d+)*$]], true)
+local domain_reg = must_regex([=[^(?:[-_[:alnum:]]+\.)*[[:alpha:]][-[:alnum:]]{0,61}[[:alnum:]]$]=], true)
 
 local function parse_host(txn, authority)
     while true do
@@ -119,6 +117,7 @@ local function parse_host(txn, authority)
 end
 
 local req_line_reg = must_regex([=[^[[:space:]]*([[:alpha:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+(HTTP/[^[:space:]]+)[[:space:]]*$]=], true)
+local http_body_reg = must_regex([[^(?:Content-Length|Transfer-Encoding)\s*:]], false)
 
 core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
     local iter = req_lines(txn)
@@ -140,6 +139,8 @@ core.register_action('deny-status', { 'tcp-req', 'tcp-res' }, function(txn, ...)
 
 core.register_action('error', { 'tcp-req', 'tcp-res' }, function(txn, ...) common_res(txn, act.ERROR, ...) end, 1)
 core.register_action('error-status', { 'tcp-req', 'tcp-res' }, function(txn, ...) common_res(txn, act.ERROR, ...) end, 2)
+
+local chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 core.register_action('http-res-connect', { 'tcp-res' }, function(txn)
     local cat = core.concat()
