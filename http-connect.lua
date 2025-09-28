@@ -114,7 +114,7 @@ local function parse_authority(txn, authority)
     common_res(txn, act.INVALID, '400 Bad Request', '; details="invalid authority: ', authority, '"')
 end
 
-local req_line_reg = must_regex([=[^[[:space:]]*([[:alpha:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+(HTTP/[^[:space:]]+)[[:space:]]*$]=], true)
+local req_line_reg = must_regex([=[^[[:space:]]*([-!#-'*+.0-9A-Z^-z|~]+)[[:space:]]+([^[:space:]]+)[[:space:]]+(HTTP/[^[:space:]]+)[[:space:]]*$]=], true)
 local http_body_reg = must_regex([[^(?:Content-Length|Transfer-Encoding)\s*:]], false)
 
 core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
