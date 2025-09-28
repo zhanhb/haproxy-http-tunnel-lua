@@ -35,10 +35,39 @@ local function must_regex(regex, case_sensitive)
     error(string.format("regex='%s', reason='%s'", regex, res), 2)
 end
 
+local reasons = {
+    [400] = 'Bad Request',
+    [401] = 'Unauthorized',
+    [403] = 'Forbidden',
+    [404] = 'Not Found',
+    [405] = 'Method Not Allowed',
+    [407] = 'Proxy Authentication Required',
+    [408] = 'Request Timeout',
+    [410] = 'Gone',
+    [421] = 'Misdirected Request',
+    [422] = 'Unprocessable Content',
+    [429] = 'Too Many Requests',
+    [500] = 'Internal Server Error',
+    [501] = 'Not Implemented',
+    [502] = 'Bad Gateway',
+    [503] = 'Service Unavailable',
+    [504] = 'Gateway Timeout',
+}
+
 local function common_res(txn, ret, status, ...)
     local cat = core.concat()
     cat:add('HTTP/1.1 ')
-    cat:add(status)
+    if type(status) ~= 'string' then
+        cat:add(tostring(status))
+        cat:add(' ')
+        cat:add(reasons[status] or '')
+    elseif #status > 3 then
+        cat:add(status)
+    else
+        cat:add(status)
+        cat:add(' ')
+        cat:add(reasons[tonumber(status)] or '')
+    end
     cat:add('\r\nDate: ')
     cat:add(txn.sc:http_date(txn.f:date()))
     local n = select('#', ...)
@@ -65,7 +94,7 @@ local function req_lines(txn)
             --   nil
             --   txn request timeout without data
             if type(line) ~= 'string' or line:sub(-1) ~= '\n' then
-                common_res(txn, act.INVALID, '408 Request Timeout')
+                common_res(txn, act.INVALID, 408)
             end
             offset = offset + #line
             if line ~= '\r\n' and line ~= '\n' then
@@ -111,7 +140,7 @@ local function parse_authority(txn, authority)
         txn:set_var('req.dst_port', port)
         return act.CONTINUE
     end
-    common_res(txn, act.INVALID, '400 Bad Request', '; details="invalid authority: ', authority, '"')
+    common_res(txn, act.INVALID, 400, '; details="invalid authority: ', authority, '"')
 end
 
 local req_line_reg = must_regex([=[^[[:space:]]*([-!#-'*+.0-9A-Z^-z|~]+)[[:space:]]+([^[:space:]]+)[[:space:]]+(HTTP/[^[:space:]]+)[[:space:]]*$]=], true)
@@ -120,13 +149,13 @@ local http_body_reg = must_regex([[^(?:Content-Length|Transfer-Encoding)\s*:]], 
 core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
     local iter = req_lines(txn)
     local st, list = req_line_reg:match(iter())
-    if not st then common_res(txn, act.INVALID, '400 Bad Request') end
+    if not st then common_res(txn, act.INVALID, 400) end
     if list[2] ~= 'CONNECT' then
-        common_res(txn, act.INVALID, '501 Not Implemented')
+        common_res(txn, act.INVALID, 501)
     end
     for line in iter do
         if http_body_reg:match(line) then
-            common_res(txn, act.INVALID, '400 Bad Request')
+            common_res(txn, act.INVALID, 400)
         end
     end
     return parse_authority(txn, list[3])
