@@ -85,7 +85,7 @@ end
 local ipv4_reg = must_regex([[^\d+(?:\.\d+)*$]], true)
 local domain_reg = must_regex([=[^(?:[-_[:alnum:]]+\.)*[[:alpha:]][-[:alnum:]]{0,61}[[:alnum:]]$]=], true)
 
-local function parse_host(txn, authority)
+local function parse_authority(txn, authority)
     while true do
         local port = txn.c:port_only(authority)
         if port <= 0 or port >= 65536 then
@@ -111,7 +111,7 @@ local function parse_host(txn, authority)
         txn:set_var('req.dst_port', port)
         return act.CONTINUE
     end
-    common_res(txn, act.INVALID, '400 Bad Request', '; details="invalid host: ', authority, '"')
+    common_res(txn, act.INVALID, '400 Bad Request', '; details="invalid authority: ', authority, '"')
 end
 
 local req_line_reg = must_regex([=[^[[:space:]]*([[:alpha:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+(HTTP/[^[:space:]]+)[[:space:]]*$]=], true)
@@ -129,7 +129,7 @@ core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
             common_res(txn, act.INVALID, '400 Bad Request')
         end
     end
-    return parse_host(txn, list[3])
+    return parse_authority(txn, list[3])
 end)
 
 core.register_action('deny', { 'tcp-req', 'tcp-res' }, function(txn, ...) common_res(txn, act.DENY, ...) end, 1)
