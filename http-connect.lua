@@ -50,9 +50,7 @@ local function common_res(txn, ret, status, ...)
             cat:add(v)
         end
     end
-    cat:add('\r\nTransfer-Encoding: chunked')
-    cat:add('\r\nConnection: close')
-    cat:add('\r\n\r\n0\r\n\r\n')
+    cat:add('\r\nContent-Length: 0\r\nConnection: close\r\n\r\n')
     txn.res:send(cat:dump())
     core.done(ret)
 end
