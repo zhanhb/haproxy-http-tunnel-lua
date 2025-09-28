@@ -83,7 +83,7 @@ local function req_lines(txn)
 end
 
 local ipv4_reg = must_regex([[^\d+(?:\.\d+)*$]], true)
-local domain_reg = must_regex([=[^(?:[-_[:alnum:]]+\.)*[[:alpha:]][-[:alnum:]]{0,61}[[:alnum:]]$]=], true)
+local domain_reg = must_regex([=[^(?:[-_[:alnum:]]+\.)*[[:alpha:]](?:[-[:alnum:]]{0,61}[[:alnum:]])?$]=], true)
 
 local function parse_authority(txn, authority)
     while true do
