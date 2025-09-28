@@ -138,6 +138,18 @@ core.register_action('deny-status', { 'tcp-req', 'tcp-res' }, function(txn, ...)
 core.register_action('error', { 'tcp-req', 'tcp-res' }, function(txn, ...) common_res(txn, act.ERROR, ...) end, 1)
 core.register_action('error-status', { 'tcp-req', 'tcp-res' }, function(txn, ...) common_res(txn, act.ERROR, ...) end, 2)
 
+local function append_ip_port(cat, ip, port)
+    if ip:find(':') then
+        cat:add('[')
+        cat:add(ip)
+        cat:add(']:')
+    else
+        cat:add(ip)
+        cat:add(':')
+    end
+    cat:add(port)
+end
+
 local chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 core.register_action('http-res-connect', { 'tcp-res' }, function(txn)
@@ -151,28 +163,10 @@ core.register_action('http-res-connect', { 'tcp-res' }, function(txn)
     end
     cat:add('"\r\nProxy-Status: ')
     cat:add(txn.sf:hostname())
-    local bc_dst = txn.sf:bc_dst()
-    if bc_dst:find(':') then
-        cat:add('; next-hop=[')
-        cat:add(bc_dst)
-        cat:add(']:')
-    else
-        cat:add('; next-hop=')
-        cat:add(bc_dst)
-        cat:add(':')
-    end
-    cat:add(txn.sf:bc_dst_port())
-    local bc_src = txn.sf:bc_src()
-    if bc_src:find(':') then
-        cat:add('; details="src=[')
-        cat:add(bc_src)
-        cat:add(']:')
-    else
-        cat:add('; details="src=')
-        cat:add(bc_src)
-        cat:add(':')
-    end
-    cat:add(txn.sf:bc_src_port())
+    cat:add('; next-hop="')
+    append_ip_port(cat, txn.sf:bc_dst(), txn.sf:bc_dst_port())
+    cat:add('"; details="src=')
+    append_ip_port(cat, txn.sf:bc_src(), txn.sf:bc_src_port())
     cat:add('"\r\n\r\n')
     local reply = cat:dump()
     if txn.res:send(reply) ~= #reply then
