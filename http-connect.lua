@@ -168,7 +168,7 @@ local function parse_authority(txn, authority)
 end
 
 local req_line_reg = must_regex([=[^[[:space:]]*([-!#-'*+.0-9A-Z^-z|~]+)[[:space:]]+([^[:space:]]+)[[:space:]]+(HTTP/[^[:space:]]+)[[:space:]]*$]=], true)
-local http_body_reg = must_regex([[^(?:Content-Length|Transfer-Encoding)\s*:]], false)
+local http_body_reg = must_regex([[^(Content-Length|Transfer-Encoding)\s*:]], false)
 
 core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
     local iter = req_lines(txn)
@@ -178,8 +178,9 @@ core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
         common_res(txn, act.INVALID, 501)
     end
     for line in iter do
-        if http_body_reg:match(line) then
-            common_res(txn, act.INVALID, 400)
+        local matches, match_result = http_body_reg:match(line)
+        if matches then
+            common_res(txn, act.INVALID, 400, '; details="', match_result[2], '"')
         end
     end
     return parse_authority(txn, list[3])
