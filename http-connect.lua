@@ -19,8 +19,8 @@ local function stringify(o)
         end
         return '{' .. table.concat(list, ',') .. '}'
     elseif type == 'string' then
-        return '"' .. o:gsub('[%z\1-\31\\"\127]', function(ch)
-            return encode_char_map[ch] or ('\\u%04x'):format(ch:byte())
+        return '"' .. o:gsub('[%c\\"]', function(ch)
+            return encode_char_map[ch] or string.format('\\u%04x', ch:byte())
         end) .. '"'
     elseif type == 'nil' then
         return 'null'
