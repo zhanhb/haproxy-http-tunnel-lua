@@ -108,30 +108,22 @@ local function common_res(txn, ret, status, ...)
     core.done(ret)
 end
 
-local function req_lines(txn)
-    local offset = 0
-    local first = true
-    return function()
-        while true do
-            local line = txn.req:line(offset)
-            -- line might be:
-            --   nil
-            --   txn request timeout without data
-            if type(line) ~= 'string' or line:sub(-1) ~= '\n' then
-                common_res(txn, act.INVALID, 408)
-            end
-            offset = offset + #line
-            if line ~= '\r\n' and line ~= '\n' then
-                first = false
-                return line
-            end
-            if not first then
-                if txn.req:remove(0, offset) ~= offset then
-                    core.done(act.ERROR)
-                end
-                return nil
-            end
+local function next_req_line(txn, offset, first)
+    repeat
+        local line = txn.req:line(offset)
+        -- line might be:
+        --   nil
+        --   txn request timeout without data
+        if type(line) ~= 'string' or line:sub(-1) ~= '\n' then
+            common_res(txn, act.INVALID, 408)
         end
+        offset = offset + #line
+        if line ~= '\r\n' and line ~= '\n' then
+            return offset, line
+        end
+    until not first
+    if txn.req:remove(0, offset) ~= offset then
+        core.done(act.ERROR)
     end
 end
 
@@ -171,13 +163,14 @@ local req_line_reg = must_regex([=[^[[:space:]]*([-!#-'*+.0-9A-Z^-z|~]+)[[:space
 local http_body_reg = must_regex([[^(Content-Length|Transfer-Encoding)\s*:]], false)
 
 core.register_action('http-req-connect', { 'tcp-req' }, function(txn)
-    local iter = req_lines(txn)
-    local st, list = req_line_reg:match(iter())
+    local offset, list, st
+    offset, list = next_req_line(txn, 0, true)
+    st, list = req_line_reg:match(list)
     if not st then common_res(txn, act.INVALID, 400) end
     if list[2] ~= 'CONNECT' then
         common_res(txn, act.INVALID, 501)
     end
-    for line in iter do
+    for _, line in next_req_line, txn, offset do
         local matches, match_result = http_body_reg:match(line)
         if matches then
             common_res(txn, act.INVALID, 400, '; details="', match_result[2], '"')
