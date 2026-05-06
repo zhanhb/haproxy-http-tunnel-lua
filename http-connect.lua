@@ -1,34 +1,3 @@
-local encode_char_map = {
-    ["\""] = "\\\"",
-    ["\\"] = "\\\\",
-    ["\b"] = "\\b",
-    ["\f"] = "\\f",
-    ["\n"] = "\\n",
-    ["\r"] = "\\r",
-    ["\t"] = "\\t",
-}
-
-local function stringify(o)
-    local type = type(o)
-    if type == 'function' or type == 'userdata' then
-        return '"' .. type .. '"'
-    elseif type == 'table' then
-        local list = {}
-        for k, v in pairs(o) do
-            list[1 + #list] = '"' .. k .. '": ' .. stringify(v)
-        end
-        return '{' .. table.concat(list, ',') .. '}'
-    elseif type == 'string' then
-        return '"' .. o:gsub('[%c\\"]', function(ch)
-            return encode_char_map[ch] or string.format('\\u%04x', ch:byte())
-        end) .. '"'
-    elseif type == 'nil' then
-        return 'null'
-    else
-        return tostring(o)
-    end
-end
-
 local function must_regex(regex, case_sensitive)
     local st, res = Regex.new(regex, case_sensitive)
     if st then return res end
