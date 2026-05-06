@@ -1,7 +1,12 @@
+local byte = string.byte
+local find = string.find
+local format = string.format
+local sub = string.sub
+
 local function must_regex(regex, case_sensitive)
     local st, res = Regex.new(regex, case_sensitive)
     if st then return res end
-    error(string.format("regex='%s', reason='%s'", regex, res), 2)
+    error(format("regex='%s', reason='%s'", regex, res), 2)
 end
 
 local reasons = {
@@ -83,7 +88,7 @@ local function next_req_line(txn, offset, first)
         -- line might be:
         --   nil
         --   txn request timeout without data
-        if type(line) ~= 'string' or line:sub(-1) ~= '\n' then
+        if type(line) ~= 'string' or byte(line, -1) ~= 10 then
             common_res(txn, act.INVALID, 408)
         end
         offset = offset + #line
@@ -106,10 +111,10 @@ local function parse_authority(txn, authority)
             break
         end
         local host = txn.c:host_only(authority)
-        if host:byte(1) == 91 and host:byte(-1) == 93 then
-            if host:find(':') == nil then break end
-            local ip = host:sub(2, -2)
-            if ip:find('/') or not core.parse_addr(ip) then break end
+        if byte(host, 1) == 91 and byte(host, -1) == 93 then
+            if not find(host, ':') then break end
+            local ip = sub(host, 2, -2)
+            if find(ip, '/') or not core.parse_addr(ip) then break end
             txn:set_var('req.dst_ip', ip)
             txn:set_var('req.dst_type', 'IPv6')
         elseif ipv4_reg:match(host) then
@@ -155,7 +160,7 @@ core.register_action('error', { 'tcp-req', 'tcp-res' }, function(txn, ...) commo
 core.register_action('error-status', { 'tcp-req', 'tcp-res' }, function(txn, ...) common_res(txn, act.ERROR, ...) end, 2)
 
 local function append_ip_port(cat, ip, port)
-    if ip:find(':') then
+    if find(ip, ':') then
         cat:add('[')
         cat:add(ip)
         cat:add(']:')
@@ -175,7 +180,7 @@ core.register_action('http-res-connect', { 'tcp-res' }, function(txn)
     cat:add('\r\nETag: W/"')
     for _ = 1, txn.f:rand(49) + 16 do
         local idx = 1 + txn.f:rand(#chars)
-        cat:add(chars:sub(idx, idx))
+        cat:add(sub(chars, idx, idx))
     end
     cat:add('"\r\nProxy-Status: ')
     cat:add(txn.sf:hostname())
