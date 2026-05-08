@@ -182,7 +182,7 @@ core.register_action('http-res-connect', { 'tcp-res' }, function(txn)
         local idx = 1 + txn.f:rand(#chars)
         cat:add(sub(chars, idx, idx))
     end
-    cat:add('"\r\nProxy-Status: ')
+    cat:add('"\r\nIncremental: ?1\r\nProxy-Status: ')
     cat:add(txn.sf:hostname())
     cat:add('; next-hop="')
     append_ip_port(cat, txn.sf:bc_dst(), txn.sf:bc_dst_port())
